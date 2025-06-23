@@ -34,34 +34,143 @@ The user flow is as follows
 4. All doctors have an email inbox. If they are away, someone needs to cover it. 
 - For V1 we need to just say REQUIRING COVER when they are on leave for the day.
 
-## Data
+## Data Model
 
-Dr -> Activity -> Room -> location
-Leave -> Activity
+```mermaid
+erDiagram
+    DOCTOR {
+        uuid id PK
+        varchar first_name
+        varchar last_name
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    
+    LOCATION {
+        uuid id PK
+        varchar location_name
+        varchar location_key
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    
+    ROOM {
+        uuid id PK
+        varchar room_name
+        uuid location_id FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    
+    ACTIVITY {
+        uuid id PK
+        timestamptz start_time
+        timestamptz end_time
+        uuid room_id FK
+        uuid doctor_id FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    
+    LEAVE {
+        uuid id PK
+        uuid activity_id FK
+        uuid dr_covering_inbox FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    
+    DOCTOR ||--o{ ACTIVITY : "creates"
+    ACTIVITY }o--|| ROOM : "booked_in"
+    ROOM }o--|| LOCATION : "located_at"
+    ACTIVITY ||--o| LEAVE : "can_have"
+    DOCTOR ||--o{ LEAVE : "covers_inbox"
+```
 
-### Doctor Table
-ID (UUIDv7)
-FirstName (string)
-LastName (string)
+### Table Descriptions
 
-### Activity Table
-ID (UUIDv7)
-Starttime (Date time)
-EndTime (Date time)
-RoomId (UUIDv7)
-DoctorID (UUIDv7)
+**Doctor**: Medical professionals who book time slots
+**Location**: Medical center locations (North Shore centers)
+**Room**: Individual rooms within locations where doctors see patients
+**Activity**: Time slots booked by doctors (typically 4-hour blocks)
+**Leave**: Leave applications that block activities and require inbox coverage
 
-### Leave Table
-ID (UUIDv7)
-ActivityID (UUIDv7)
-drCoveringInbox (UUIDv7)
+## Recurring Activities System
 
-### Location Table
-Id (UUIDv7)
-LocationName (string)
-LocationKey (string)
+### Overview
+To handle doctors' regular weekly schedules, we implement a template-based system that generates recurring activities automatically. This prevents doctors from having to manually recreate their regular schedule each week and ensures leave applications don't affect future template-generated activities.
 
-### Room Table
-Id (UUIDv7)
-RoomName (string)
-LocationId (UUIDv7)
+### Templates and Generation
+- **Activity Templates**: Store recurring patterns (e.g., "Every Monday 9-1 in Room 101")
+- **Monthly Generation**: Automatically generate concrete activities from templates at the start of each month
+- **Conflict Resolution**: Skip template generation if room/time conflicts exist for that specific week
+- **Leave Isolation**: Leave applications only affect generated activities, not the underlying templates
+
+### Additional Tables for Recurring Activities
+
+#### Activity Templates Table
+```mermaid
+erDiagram
+    ACTIVITY_TEMPLATE {
+        uuid id PK
+        uuid doctor_id FK
+        uuid room_id FK
+        integer day_of_week
+        time start_time
+        time end_time
+        varchar template_name
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+```
+
+#### Extended Activities Table
+The existing activities table will be extended with:
+- `template_id`: Links to the template that generated this activity (if any)
+- `generation_month`: The month this activity was generated for (YYYY-MM-01 format)
+- `is_template_generated`: Boolean flag indicating if this came from a template
+
+#### Generation Logs Table (Optional)
+```mermaid
+erDiagram
+    GENERATION_LOG {
+        uuid id PK
+        date generation_month
+        integer total_templates_processed
+        integer total_activities_generated
+        integer total_conflicts_skipped
+        timestamptz generated_at
+        uuid generated_by
+    }
+```
+
+### Updated Relationships
+```mermaid
+erDiagram
+    DOCTOR ||--o{ ACTIVITY_TEMPLATE : "creates"
+    ACTIVITY_TEMPLATE ||--o{ ACTIVITY : "generates"
+    ROOM ||--o{ ACTIVITY_TEMPLATE : "assigned_to"
+    ACTIVITY_TEMPLATE }o--|| ROOM : "uses"
+    ACTIVITY_TEMPLATE }o--|| DOCTOR : "belongs_to"
+```
+
+### Key Workflows
+
+#### Template Creation (Doctor)
+1. Doctor creates activity template specifying day of week, time, and room
+2. Template remains active until manually deactivated
+3. Multiple templates can be created for different days/times
+
+#### Monthly Generation (Automated)
+1. System runs at start of each month
+2. Processes all active templates
+3. Generates concrete activities for matching days in the month
+4. Skips generation if conflicts exist (suspends for that week only)
+5. Orders generated activities chronologically
+
+#### Leave Application (Doctor)
+1. Leave applications work on generated activities as normal
+2. Template remains unaffected
+3. Future months continue to generate from template
+4. Shows "REQUIRING COVER" for affected activities
