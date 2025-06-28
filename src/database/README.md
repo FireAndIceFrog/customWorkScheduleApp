@@ -1,337 +1,328 @@
 # Medical Center Scheduling Database Schema
 
-This database schema is designed for managing doctor schedules and leave applications at North Shore medical centers using Supabase PostgreSQL.
-
 ## Overview
+This SQLite database schema supports a medical center scheduling system for North Shore medical centers. It manages doctor schedules, room bookings, leave applications, and provides automated recurring activity generation through templates.
 
-The system allows doctors to create booking slots and apply for leave, while providing administrators with comprehensive views of schedules, room usage, and coverage requirements.
+## Database Structure
 
-## Schema Structure
+### Core Tables
+- **`doctors`** - Medical professionals who book time slots
+- **`locations`** - Medical center locations (North Shore centers)
+- **`rooms`** - Individual rooms within locations
+- **`activities`** - Time slots booked by doctors (typically 4-hour blocks)
+- **`leaves`** - Leave applications that block activities and require coverage
 
-### Tables
+### Template System
+- **`activity_templates`** - Recurring patterns for regular weekly schedules
+- **`generation_logs`** - Tracks automated monthly generation process
 
-- **doctors**: Medical professionals who book time slots
-- **locations**: Medical center locations (North Shore centers)
-- **rooms**: Individual rooms within locations where doctors see patients
-- **activities**: Time slots booked by doctors (typically 4-hour blocks)
-- **leave**: Leave applications that block activities and require inbox coverage
+### Utility Tables
+- **`database_version`** - Version tracking for schema upgrades
 
-### Key Features
+## Quick Start
 
-- **UUIDv7 primary keys** for all tables
-- **Automatic timestamps** with created_at and updated_at fields
-- **Foreign key constraints** ensuring data integrity
-- **Row Level Security (RLS)** enabled for Supabase authentication
-- **Comprehensive indexing** for optimal query performance
-- **Business rule validation** through constraints
+### 1. Initialize Database
+```bash
+# Create new database and apply all schema
+sqlite3 scheduling.db < src/database/init.sql
 
-## Installation
-
-Execute the schema files in order:
-
-```sql
--- 1. Create tables and triggers
-\i src/database/schema/01_create_tables.sql
-
--- 2. Create indexes for performance
-\i src/database/schema/02_create_indexes.sql
-
--- 3. Add constraints and RLS policies
-\i src/database/schema/03_create_constraints.sql
-
--- 4. Create stored procedures
-\i src/database/procs/create_activity.sql
-\i src/database/procs/get_doctor_schedule.sql
-\i src/database/procs/get_doctor_weekly_rooms.sql
-\i src/database/procs/get_room_activities.sql
+# Load sample data for testing
+sqlite3 scheduling.db < src/database/sample_data.sql
 ```
 
-## Stored Procedures
+### 2. Key Admin Queries
 
-### 1. create_activity()
-
-Creates a new activity with room conflict validation.
-
-**Usage:**
+#### Doctor Daily Schedule
 ```sql
-SELECT create_activity(
-    p_doctor_id := '123e4567-e89b-12d3-a456-426614174000',
-    p_room_id := '123e4567-e89b-12d3-a456-426614174001',
-    p_start_time := '2024-06-24 09:00:00+12',
-    p_end_time := '2024-06-24 13:00:00+12'
+-- View all bookings for a specific doctor on a specific day
+SELECT * FROM v_doctor_daily_schedule 
+WHERE doctor_name = 'Sarah Johnson' 
+  AND activity_date = '2025-01-06'
+ORDER BY start_time;
+```
+
+#### Doctor Weekly Schedule  
+```sql
+-- View doctor's weekly room assignments
+SELECT * FROM v_doctor_weekly_schedule 
+WHERE doctor_name = 'Michael Chen'
+  AND activity_date BETWEEN '2025-01-06' AND '2025-01-12'
+ORDER BY day_of_week, start_time;
+```
+
+#### Room Coverage Status
+```sql
+-- View room activities and coverage requirements
+SELECT * FROM v_room_activities 
+WHERE room_name = 'Consultation Room A'
+  AND activity_date = '2025-01-09'
+ORDER BY start_time;
+```
+
+#### Inbox Coverage Requirements
+```sql
+-- View doctors requiring inbox coverage due to leave
+SELECT * FROM v_inbox_coverage 
+WHERE leave_date >= date('now')
+ORDER BY leave_date;
+```
+
+## Doctor Operations
+
+### Create Activity Template (Regular Schedule)
+```sql
+-- Doctor creates recurring Monday morning clinic
+INSERT INTO activity_templates (
+    id, doctor_id, room_id, day_of_week, 
+    start_time, end_time, template_name, is_active
+) VALUES (
+    'tmpl_new', 'dr_001', 'room_001', 1, 
+    '09:00', '13:00', 'Monday Morning Clinic', 1
 );
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "activity_id": "123e4567-e89b-12d3-a456-426614174002",
-  "doctor_name": "Dr. John Smith",
-  "room_name": "Room 101",
-  "start_time": "2024-06-24T09:00:00+12:00",
-  "end_time": "2024-06-24T13:00:00+12:00",
-  "message": "Activity created successfully"
-}
-```
-
-### 2. get_doctor_schedule()
-
-Gets a doctor's schedule for a specific day (Admin Query #1).
-
-**Usage:**
+### Create Single Activity (One-time Booking)
 ```sql
-SELECT get_doctor_schedule(
-    p_doctor_id := '123e4567-e89b-12d3-a456-426614174000',
-    p_date := '2024-06-24'
+-- Doctor books a specific time slot
+INSERT INTO activities (
+    id, start_time, end_time, doctor_id, room_id, 
+    activity_type, notes, is_template_generated
+) VALUES (
+    'act_new',
+    strftime('%s', '2025-01-15 09:00:00'),
+    strftime('%s', '2025-01-15 13:00:00'),
+    'dr_001', 'room_001', 
+    'BOOKING', 'Special consultation', 0
 );
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "doctor_id": "123e4567-e89b-12d3-a456-426614174000",
-  "doctor_name": "Dr. John Smith",
-  "date": "2024-06-24",
-  "status": "SCHEDULED",
-  "activities": [
-    {
-      "activity_id": "123e4567-e89b-12d3-a456-426614174002",
-      "start_time": "2024-06-24T09:00:00+12:00",
-      "end_time": "2024-06-24T13:00:00+12:00",
-      "room_name": "Room 101",
-      "location_name": "North Shore Medical Center",
-      "duration_hours": 4
-    }
-  ],
-  "total_activities": 1,
-  "total_hours": 4
-}
-```
-
-### 3. get_doctor_weekly_rooms()
-
-Gets a doctor's room assignments for a week (Admin Query #2).
-
-**Usage:**
+### Apply for Leave
 ```sql
-SELECT get_doctor_weekly_rooms(
-    p_doctor_id := '123e4567-e89b-12d3-a456-426614174000',
-    p_week_start := '2024-06-24'
+-- Step 1: Create leave activity (blocks the time)
+INSERT INTO activities (
+    id, start_time, end_time, doctor_id, room_id, 
+    activity_type, notes
+) VALUES (
+    'act_leave',
+    strftime('%s', '2025-01-20 00:00:00'),
+    strftime('%s', '2025-01-20 23:59:59'),
+    'dr_001', 'room_001', 
+    'LEAVE', 'Personal leave'
+);
+
+-- Step 2: Create leave record
+INSERT INTO leaves (
+    id, activity_id, leave_type, reason, approval_status
+) VALUES (
+    'leave_new', 'act_leave', 'PERSONAL', 
+    'Medical appointment', 'PENDING'
 );
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "doctor_id": "123e4567-e89b-12d3-a456-426614174000",
-  "doctor_name": "Dr. John Smith",
-  "week_start": "2024-06-24",
-  "week_end": "2024-06-30",
-  "weekly_schedule": [
-    {
-      "date": "2024-06-24",
-      "day_name": "Monday",
-      "status": "SCHEDULED",
-      "rooms": [...],
-      "total_hours": 4
-    }
-  ],
-  "total_week_hours": 20,
-  "days_on_leave": 0,
-  "days_with_activities": 5
-}
-```
+## Template System Workflows
 
-### 4. get_room_activities()
+### Monthly Generation Process
+The system automatically generates concrete activities from templates at the start of each month:
 
-Gets activities for a specific room showing coverage needs (Admin Query #3).
-
-**Usage:**
 ```sql
-SELECT get_room_activities(
-    p_room_id := '123e4567-e89b-12d3-a456-426614174001',
-    p_date := '2024-06-24'
-);
+-- Example: Generate activities for February 2025
+-- (This would typically be done by an automated process)
+
+-- Process all active templates for the month
+INSERT INTO activities (
+    id, start_time, end_time, doctor_id, room_id,
+    activity_type, template_id, generation_month, is_template_generated
+)
+SELECT 
+    'gen_' || at.id || '_' || strftime('%Y%m%d', date_series.date),
+    strftime('%s', date_series.date || ' ' || at.start_time),
+    strftime('%s', date_series.date || ' ' || at.end_time),
+    at.doctor_id,
+    at.room_id,
+    'BOOKING',
+    at.id,
+    '2025-02',
+    1
+FROM activity_templates at
+CROSS JOIN (
+    -- Generate all dates in February 2025 that match template day_of_week
+    WITH RECURSIVE dates(date) AS (
+        SELECT '2025-02-01'
+        UNION ALL
+        SELECT date(date, '+1 day')
+        FROM dates
+        WHERE date < '2025-02-28'
+    )
+    SELECT date FROM dates
+    WHERE CAST(strftime('%w', date) AS INTEGER) = at.day_of_week
+) AS date_series
+WHERE at.is_active = 1
+  AND NOT EXISTS (
+      -- Skip if room/time conflict exists
+      SELECT 1 FROM activities a2 
+      WHERE a2.room_id = at.room_id
+        AND a2.start_time = strftime('%s', date_series.date || ' ' || at.start_time)
+  );
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "room_id": "123e4567-e89b-12d3-a456-426614174001",
-  "room_name": "Room 101",
-  "location_name": "North Shore Medical Center",
-  "date": "2024-06-24",
-  "activities": [
-    {
-      "activity_id": "123e4567-e89b-12d3-a456-426614174002",
-      "doctor_name": "Dr. John Smith",
-      "status": "REQUIRING COVER",
-      "start_time": "2024-06-24T09:00:00+12:00",
-      "end_time": "2024-06-24T13:00:00+12:00"
-    }
-  ],
-  "summary": {
-    "total_activities": 1,
-    "requiring_cover": 1,
-    "total_hours_booked": 4
-  },
-  "inbox_coverage_needed": true
-}
-```
+## Database Views Reference
 
-### 5. get_rooms_requiring_cover()
+### `v_doctor_daily_schedule`
+Shows bookings for doctors by day with room information. Displays "LEAVE" status for leave days.
 
-Helper function to get all rooms requiring coverage for a date.
+**Columns:** `doctor_id`, `doctor_name`, `activity_date`, `start_time`, `end_time`, `room_name`, `room_number`, `location_name`, `status`, `notes`
 
-**Usage:**
+### `v_doctor_weekly_schedule`
+Shows doctor's room assignments by day of week. Used for weekly overview displays.
+
+**Columns:** `doctor_id`, `doctor_name`, `day_of_week`, `day_name`, `activity_date`, `room_name`, `room_number`, `display_value`
+
+### `v_room_activities`
+Shows activities by room with coverage status. Displays "REQUIRING COVER" for rooms affected by leave.
+
+**Columns:** `room_id`, `room_name`, `room_number`, `location_name`, `activity_date`, `start_time`, `end_time`, `doctor_name`, `coverage_status`, `notes`
+
+### `v_inbox_coverage`
+Shows doctors requiring inbox coverage due to approved/pending leave.
+
+**Columns:** `doctor_id`, `doctor_name`, `email`, `leave_date`, `leave_type`, `reason`, `inbox_coverage_status`, `approval_status`
+
+### `v_active_templates`
+Shows all active recurring activity templates with readable formatting.
+
+**Columns:** `template_id`, `doctor_name`, `room_name`, `room_number`, `location_name`, `day_name`, `start_time`, `end_time`, `template_name`, `created_date`
+
+### `v_template_generation_summary`
+Shows monthly generation statistics for monitoring the template system.
+
+**Columns:** `generation_month`, `total_templates_processed`, `total_activities_generated`, `total_conflicts_skipped`, `generation_status`, `generated_date`, `success_rate_percent`
+
+## Schema Versioning
+
+The database uses a robust version control system to manage schema upgrades safely:
+
+- **Version 1:** Core tables (doctors, locations, rooms, activities, leaves)
+- **Version 2:** Activity templates and recurring system
+- **Version 3:** Database views and admin helpers
+
+### Version Control Behavior
+
+Each schema file uses a minimal, clean version checking system:
+
+- **Version Variable:** Each script starts with `.parameter set upgrade_version N`
+- **Exact Match Required:** Script only applies if current database version is exactly `upgrade_version - 1`
+- **Single Line Check:** `SELECT CASE WHEN COALESCE(MAX(version), 0) != $upgrade_version - 1 THEN RAISE(IGNORE) END FROM database_version;`
+- **Safe & Simple:** Prevents downgrades, skipped versions, and duplicate operations
+
+### Checking Database Version
 ```sql
-SELECT get_rooms_requiring_cover(p_date := '2024-06-24');
+SELECT version, description, 
+       datetime(applied_at, 'unixepoch', 'localtime') as applied_at
+FROM database_version 
+ORDER BY version;
 ```
 
-## Common Workflows
-
-### Creating a Doctor Schedule
-
-1. Insert doctor record
-2. Insert location and room records
-3. Use `create_activity()` to create booking slots
-4. Create leave applications by inserting into `leave` table
-
-### Admin Dashboard Queries
-
-1. **Daily Schedule View**: Use `get_doctor_schedule()` for each doctor
-2. **Weekly Overview**: Use `get_doctor_weekly_rooms()` for weekly planning
-3. **Room Management**: Use `get_room_activities()` to track room usage
-4. **Coverage Alerts**: Use `get_rooms_requiring_cover()` for daily coverage overview
-
-## Error Handling
-
-All stored procedures return JSON responses with:
-- `success`: boolean indicating operation success
-- `error`: error message (if success is false)
-- `error_code`: standardized error code for programmatic handling
-
-Common error codes:
-- `MISSING_PARAMETERS`: Required parameters not provided
-- `ROOM_CONFLICT`: Room already booked for the time slot
-- `DOCTOR_NOT_FOUND`: Invalid doctor ID
-- `ROOM_NOT_FOUND`: Invalid room ID
-- `DATABASE_ERROR`: Unexpected database error
-
-## Security
-
-- Row Level Security (RLS) enabled on all tables
-- Basic policies allow authenticated users full access
-- Modify policies based on your specific authentication requirements
-- All stored procedures grant execute permissions to `authenticated` role
-
-### 6. create_activity_template()
-
-Creates recurring schedule patterns for doctors.
-
-**Usage:**
+### Schema File Structure
 ```sql
-SELECT create_activity_template(
-    p_doctor_id := '123e4567-e89b-12d3-a456-426614174000',
-    p_room_id := '123e4567-e89b-12d3-a456-426614174001',
-    p_day_of_week := 1, -- Monday
-    p_start_time := '09:00:00',
-    p_end_time := '13:00:00',
-    p_template_name := 'Monday Morning Clinic'
-);
+-- Every schema file starts with this pattern:
+.parameter set upgrade_version 2
+
+BEGIN;
+SELECT CASE WHEN COALESCE(MAX(version), 0) != $upgrade_version - 1 THEN RAISE(IGNORE) END FROM database_version;
+
+-- ... schema changes ...
+
+INSERT OR IGNORE INTO database_version (version, description) VALUES ($upgrade_version, 'Description');
+UPDATE database_version SET version = $upgrade_version, applied_at = strftime('%s', 'now') WHERE version = $upgrade_version - 1;
+COMMIT;
 ```
 
-### 7. generate_monthly_activities()
+### Version Control Scenarios
 
-Generates concrete activities from templates for a month.
-
-**Usage:**
-```sql
--- Generate for current month
-SELECT generate_monthly_activities();
-
--- Generate for specific month
-SELECT generate_monthly_activities('2024-07-01');
-```
-
-### 8. get_doctor_templates()
-
-Gets all templates for a specific doctor.
-
-**Usage:**
-```sql
-SELECT get_doctor_templates('123e4567-e89b-12d3-a456-426614174000');
-```
-
-### 9. update_activity_template()
-
-Updates an existing activity template.
-
-**Usage:**
-```sql
-SELECT update_activity_template(
-    p_template_id := '123e4567-e89b-12d3-a456-426614174005',
-    p_start_time := '08:00:00',
-    p_end_time := '12:00:00'
-);
-```
-
-### 10. get_generation_status()
-
-Checks if monthly generation has been run for a month.
-
-**Usage:**
-```sql
-SELECT get_generation_status('2024-07-01');
-```
-
-## Recurring Activities System
-
-### Overview
-
-The system includes a template-based recurring activities feature that allows doctors to create weekly schedule patterns that automatically generate concrete activities each month.
-
-### Key Features
-
-- **Activity Templates**: Store recurring patterns (day of week, time, room)
-- **Monthly Generation**: Automatically create activities from templates
-- **Conflict Resolution**: Skip generation when room/time conflicts exist
-- **Leave Isolation**: Leave applications don't affect templates
-
-### Template Workflows
-
-#### Creating Templates
-1. Doctor creates template specifying recurring pattern
-2. System validates for conflicts with existing templates
-3. Template becomes active and ready for generation
-
-#### Monthly Generation Process
-1. Run at start of each month (manually or via cron)
-2. Process all active templates
-3. Generate activities for matching days in the month
-4. Skip generation if conflicts exist (suspend for that week)
-5. Log generation results
-
-#### Template Management
-- View all templates for a doctor
-- Update template details (time, room, etc.)
-- Activate/deactivate templates
-- Delete templates permanently
-
-### Additional Tables
-
-- **activity_templates**: Store recurring schedule patterns
-- **generation_logs**: Track monthly generation runs
-- **activities** (extended): Added template_id, generation_month, is_template_generated
+| Database Version | Script Target | Result |
+|------------------|---------------|---------|
+| 0 (new DB) | Version 1 | ✅ Applied |
+| 1 | Version 2 | ✅ Applied |
+| 2 | Version 2 | ❌ Skipped (already applied) |
+| 3 | Version 2 | ❌ Skipped (database newer) |
+| 0 | Version 2 | ❌ Skipped (missing prerequisite) |
 
 ## Performance Considerations
 
-- Comprehensive indexing on foreign keys and time-based queries
-- Partial indexes for leave-specific queries
-- Composite indexes for room conflict checking
-- Template-specific indexes for generation performance
-- Consider partitioning activities table by date for large datasets
+### Key Indexes
+- `idx_activities_doctor_time` - Doctor schedule queries
+- `idx_activities_room_time` - Room availability queries  
+- `idx_activities_time` - Time-based activity queries
+- `idx_templates_doctor_active` - Template lookups
+- `idx_leaves_status` - Leave status queries
+
+### SQLite Optimizations
+- Foreign keys enabled for referential integrity
+- WAL mode for better concurrent access
+- 64MB cache size for improved performance
+- Unix timestamps for efficient date/time operations
+
+## Common Patterns
+
+### Check Room Availability
+```sql
+SELECT r.room_name, r.room_number
+FROM rooms r
+WHERE r.location_id = 'loc_001'
+  AND NOT EXISTS (
+    SELECT 1 FROM activities a 
+    WHERE a.room_id = r.id
+      AND a.start_time < strftime('%s', '2025-01-15 13:00:00')
+      AND a.end_time > strftime('%s', '2025-01-15 09:00:00')
+  );
+```
+
+### Find Conflicts
+```sql
+-- Find overlapping activities for same room
+SELECT a1.id, a2.id, r.room_name
+FROM activities a1
+JOIN activities a2 ON a1.room_id = a2.room_id AND a1.id != a2.id
+JOIN rooms r ON a1.room_id = r.id
+WHERE a1.start_time < a2.end_time 
+  AND a1.end_time > a2.start_time;
+```
+
+### Coverage Requirements
+```sql
+-- All activities requiring coverage (leave + no assigned cover)
+SELECT a.*, d.first_name || ' ' || d.last_name as doctor_name
+FROM activities a
+JOIN doctors d ON a.doctor_id = d.id
+JOIN leaves l ON l.activity_id = a.id
+WHERE l.approval_status = 'APPROVED'
+  AND l.dr_covering_inbox IS NULL;
+```
+
+## Troubleshooting
+
+### Common Issues
+1. **Foreign key constraint errors** - Ensure referenced records exist
+2. **Unique constraint violations** - Check for duplicate room/time bookings  
+3. **Template generation conflicts** - Review existing activities before generation
+4. **Leave application issues** - Verify activity exists before creating leave record
+
+### Database Integrity Check
+```sql
+PRAGMA integrity_check;
+PRAGMA foreign_key_check;
+```
+
+### Reset Sample Data
+```sql
+-- Clear all data (preserve schema)
+DELETE FROM leaves;
+DELETE FROM activities;
+DELETE FROM generation_logs; 
+DELETE FROM activity_templates;
+DELETE FROM doctors;
+DELETE FROM rooms;
+DELETE FROM locations;
+
+-- Reload sample data
+.read src/database/sample_data.sql
