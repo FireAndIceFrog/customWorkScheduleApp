@@ -1,15 +1,3 @@
--- Set the target version for this upgrade script
--- This script upgrades from version 2 to version 3
-.parameter set upgrade_version 3
-
--- Database views and helper queries for admin interface
--- Provides convenient access patterns for the required admin queries
-
-BEGIN;
-
--- Only apply if current version is exactly (upgrade_version - 1)
-SELECT CASE WHEN COALESCE(MAX(version), 0) != $upgrade_version - 1 THEN RAISE(IGNORE) END FROM database_version;
-
 -- View: Doctor Daily Schedule
 -- Shows bookings for a doctor on a specific day with room information
 -- Supports the admin query: "bookings a doctor has for a day"
@@ -158,9 +146,5 @@ JOIN rooms r ON at.room_id = r.id
 JOIN locations l ON r.location_id = l.id
 WHERE at.is_active = 1
 ORDER BY d.last_name, d.first_name, at.day_of_week, at.start_time;
-
 -- Update to new version
-INSERT OR IGNORE INTO database_version (version, description) VALUES ($upgrade_version, 'Database views and admin query helpers');
-UPDATE database_version SET version = $upgrade_version, applied_at = strftime('%s', 'now') WHERE version = $upgrade_version - 1;
-
-COMMIT;
+UPDATE database_version SET version = 3, applied_at = strftime('%s', 'now') WHERE version = 2;

@@ -1,6 +1,13 @@
 export const typeDefs = `#graphql
   # Core entity types
-  
+  type DatabaseUpdateResult {
+    success: Boolean!
+    message: String
+    currentVersion: Int!
+    executedFiles: [String!]!
+    errors: [String!]!
+  }
+    
   type Doctor {
     id: ID!
     firstName: String!
@@ -96,6 +103,23 @@ export const typeDefs = `#graphql
     generatedAt: String!
     generatedBy: String
     successRatePercent: Float
+  }
+
+  # Health monitoring types
+
+  type DatabaseHealth {
+    connected: Boolean!
+    version: Int!
+    integrityCheck: String!
+    tableCount: Int!
+    viewCount: Int!
+    indexCount: Int!
+  }
+
+  type Health {
+    status: String! # healthy, degraded, unhealthy
+    database: DatabaseHealth!
+    timestamp: String!
   }
 
   # Admin view types for spreadsheet-like queries
@@ -242,6 +266,9 @@ export const typeDefs = `#graphql
   # Queries
 
   type Query {
+    # System health monitoring
+    health: Health!
+    
     # Core entity queries
     doctors: [Doctor!]!
     doctor(id: ID!): Doctor
@@ -335,6 +362,6 @@ export const typeDefs = `#graphql
     regenerateMonthlyActivities(month: String!, force: Boolean = false): GenerationLog!
     
     # Database management
-    updateDatabase: String!
+    updateDatabase: DatabaseUpdateResult!
   }
 `;

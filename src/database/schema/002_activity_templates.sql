@@ -1,16 +1,3 @@
--- Set the target version for this upgrade script
--- This script upgrades from version 1 to version 2
-.parameter set upgrade_version 2
-
--- Activity Templates schema for recurring activities system
--- Enables doctors to create templates for regular weekly schedules
--- Supports automated monthly generation of concrete activities
-
-BEGIN;
-
--- Only apply if current version is exactly (upgrade_version - 1)
-SELECT CASE WHEN COALESCE(MAX(version), 0) != $upgrade_version - 1 THEN RAISE(IGNORE) END FROM database_version;
-
 -- Activity Templates table - stores recurring patterns for doctors' regular schedules
 -- Templates remain active until manually deactivated, unaffected by leave applications
 CREATE TABLE IF NOT EXISTS activity_templates (
@@ -74,7 +61,4 @@ CREATE INDEX IF NOT EXISTS idx_activities_generated ON activities(is_template_ge
 CREATE INDEX IF NOT EXISTS idx_activities_template_generated ON activities(template_id, is_template_generated);
 
 -- Update to new version
-INSERT OR IGNORE INTO database_version (version, description) VALUES ($upgrade_version, 'Activity templates and recurring activities system');
-UPDATE database_version SET version = $upgrade_version, applied_at = strftime('%s', 'now') WHERE version = $upgrade_version - 1;
-
-COMMIT;
+UPDATE database_version SET version = 2, applied_at = strftime('%s', 'now') WHERE version = 1;

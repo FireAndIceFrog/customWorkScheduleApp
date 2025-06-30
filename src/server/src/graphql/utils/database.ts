@@ -31,3 +31,12 @@ export const dbRun = (query: string, params: any[] = []): Promise<sqlite3.RunRes
     });
   });
 };
+
+export const dbExec = (query: string): Promise<sqlite3.Statement> => {
+  return new Promise((resolve, reject) => {
+    db.exec(query, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+};

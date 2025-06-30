@@ -1,6 +1,3 @@
--- Initial database schema for medical center scheduling system
--- Creates core tables for doctors, locations, rooms, activities, and leave management
-
 -- Database version tracking table
 -- This ensures we can safely upgrade the database schema over time
 CREATE TABLE IF NOT EXISTS database_version (

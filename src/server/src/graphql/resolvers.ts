@@ -2,6 +2,7 @@
 import { doctors } from './queries/doctors';
 import { doctor } from './queries/doctor';
 import { doctorDailySchedule } from './queries/doctorDailySchedule';
+import { health } from './queries/health';
 
 // Mutation resolvers
 import { createDoctor } from './mutations/createDoctor';
@@ -16,6 +17,9 @@ import { ApolloServerOptionsWithStaticSchema, BaseContext } from '@apollo/server
 export const resolvers: ApolloServerOptionsWithStaticSchema<BaseContext>['resolvers'] = {
   // Root resolvers
   Query: {
+    // System health monitoring
+    health,
+    
     // Doctor queries
     doctors,
     doctor,
