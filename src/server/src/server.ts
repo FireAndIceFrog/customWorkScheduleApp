@@ -1,25 +1,25 @@
-import { startStandaloneServer } from '@apollo/server/standalone';
-import { createApp, createApolloServer } from './app';
+import { createApp } from './app';
 import config from './config';
 
 async function startServer() {
   try {
     // Create and start Apollo GraphQL server
-    const apolloServer = await createApolloServer();
-    
-    const { url } = await startStandaloneServer(apolloServer, {
-      listen: { port: config.port },
-    });
+    const express = await createApp();
+    const server = express.listen(
+      { port: config.port },
+      (err) => console.log(err)
+    )
 
-    console.log(`🚀 GraphQL Server ready at: ${url}`);
-    console.log(`📊 GraphQL Playground available at: ${url}`);
+
+    console.log(`🚀 GraphQL Server ready at: http://localhost:${config.port}`);
+    console.log(`📊 GraphQL Playground available at: http://localhost:${config.port}`);
     console.log(`🌍 Environment: ${config.nodeEnv}`);
     console.log(`💾 Database: ${config.databasePath}`);
 
     // Graceful shutdown
     process.on('SIGINT', async () => {
       console.log('\n🛑 Shutting down server...');
-      await apolloServer.stop();
+      server.close();
       process.exit(0);
     });
 

@@ -1,22 +1,9 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import sqlite3 from 'sqlite3';
-import config from '../../config';
-import { dbGet, dbAll, dbRun, dbExec } from '../utils/database';
+import { dbGet, dbExec } from '../../../utils/database';
+import { UpdateResult } from '../types/UpdateResult';
+import { SchemaFile } from '../types/SchemaFile';
 
-interface SchemaFile {
-  filename: string;
-  version: number;
-  fullPath: string;
-}
-
-interface UpdateResult {
-  success: boolean;
-  message: string;
-  currentVersion: number;
-  executedFiles: string[];
-  errors: string[];
-}
 
 export const updateDatabase = async (): Promise<UpdateResult> => {
   const result: UpdateResult = {

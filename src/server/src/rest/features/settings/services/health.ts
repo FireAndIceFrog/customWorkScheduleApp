@@ -1,17 +1,5 @@
-import { dbGet, dbAll } from '../utils/database';
-
-interface HealthStatus {
-  status: string;
-  database: {
-    connected: boolean;
-    version: number;
-    integrityCheck: string;
-    tableCount: number;
-    viewCount: number;
-    indexCount: number;
-  };
-  timestamp: string;
-}
+import { dbGet } from '../../../utils/database';
+import { HealthStatus } from '../types/HealthStatus';
 
 export const health = async (): Promise<HealthStatus> => {
   const result: HealthStatus = {

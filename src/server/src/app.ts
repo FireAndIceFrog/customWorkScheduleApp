@@ -1,26 +1,17 @@
 import express from 'express';
-import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
-import { typeDefs } from './graphql/schema';
-import { resolvers } from './graphql/resolvers';
+import { HealthController } from './rest/features/settings/controllers/health';
+import { SettingsController } from './rest/features/settings/controllers/settings';
 
 export async function createApp() {
   const app = express();
 
-  // Health check endpoint
-  app.get('/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Server is running' });
-  });
+  const controllers = [
+    new HealthController(app),
+    new SettingsController(app),
+  ];
+
+  // Register all controllers
+  controllers.forEach(controller => controller.register());
 
   return app;
-}
-
-export async function createApolloServer() {
-  // Create Apollo Server
-  const server = new ApolloServer({
-    typeDefs,
-    resolvers,
-  });
-
-  return server;
 }
