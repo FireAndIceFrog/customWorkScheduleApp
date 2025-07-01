@@ -49,3 +49,6 @@ We have 3 main features:
 - If the room was booked but no longer, it needs to show REQUIRING COVER
 * All doctors have an email inbox. If they are away, someone needs to cover it. 
 - For V1 we need to just say REQUIRING COVER when they are on leave for the day.
+
+## Types
+All types from the features should be exported again in the src/types.ts file. This is so that the api tests can pick up the change.
