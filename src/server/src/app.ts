@@ -4,6 +4,8 @@ import { SettingsController } from './rest/features/settings/controllers/setting
 import { DoctorsController } from './rest/features/doctors/controllers/doctors';
 import { LocationsController } from './rest/features/locations/controllers/locations';
 import { RoomsController } from './rest/features/rooms/controllers/rooms';
+import { ActivityTemplatesController } from './rest/features/activity-templates/controllers/activity-templates';
+import { ActivitiesController } from './rest/features/activities/controllers/activities';
 
 export async function createApp() {
   const app = express();
@@ -17,6 +19,8 @@ export async function createApp() {
     new DoctorsController(app),
     new LocationsController(app),
     new RoomsController(app),
+    new ActivityTemplatesController(app),
+    new ActivitiesController(app),
   ];
 
   // Register all controllers
