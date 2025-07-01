@@ -138,7 +138,7 @@ Then('the creation should fail with error {string}', async function (expectedMes
     expect(savedInfo.lastErrorResponse!.message).toBe(expectedMessage);
 });
 
-Then('the error should contain {string}', async function (expectedError: string) {
+Then('the doctor error should contain {string}', async function (expectedError: string) {
     expect(savedInfo.lastErrorResponse).toBeDefined();
     expect(savedInfo.lastErrorResponse!.errors).toBeDefined();
     expect(savedInfo.lastErrorResponse!.errors).toContain(expectedError);

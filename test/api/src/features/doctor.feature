@@ -36,8 +36,7 @@ Feature: Doctor Feature
         | First      | Doctor     | duplicate@example.com  |
         | Second      | Doctor    | duplicate@example.com  |
         Then the creation should fail with error "Doctor with this email already exists"
-        And the error should contain "Email already exists"
-
+        And the doctor error should contain "Email already exists"
 
         When I delete doctor "First Doctor"
         Then the doctor should be successfully deleted

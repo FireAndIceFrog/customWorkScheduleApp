@@ -21,3 +21,5 @@ You dont need to write 100 tests. Unit tests should cover most of the work - you
 We are using a database that is live. So we wont always have an empty one -all our tests should keep that in mind. 
 
 For now all the doctors/activities etc have a random number associated for the unique contraints. The standard right now is to replace `{}` in the feature file data with the random number.
+
+When writing controllers, use the types defined in the @local/server package. It is the exported types from the server itself.

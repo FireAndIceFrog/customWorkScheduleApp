@@ -1,7 +1,9 @@
+import { Location } from './Location';
+
 export interface LocationResponse {
   success: boolean;
   message: string;
-  location?: any;
-  locations?: any[];
+  location?: Location;
+  locations?: Location[];
   errors?: string[];
 }
