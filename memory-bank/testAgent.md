@@ -14,3 +14,10 @@ ALWAYS read a controller, feature and step file that exists so you can understan
 Be considerate and write clean code that is easy to follow. You dont work with people who can code well so good standards are important. 
 
 It would be good if you read the respective controller files in the src/server project so that you know how they interact. Ive connected the types so that any type which is part of the server is automatically available to the api tests project.
+
+You dont need to write 100 tests. Unit tests should cover most of the work - you need to make sure that the validation is working and the happy path is successful. Always write maintainable code - maintanence is most important.
+
+## Caveats
+We are using a database that is live. So we wont always have an empty one -all our tests should keep that in mind. 
+
+For now all the doctors/activities etc have a random number associated for the unique contraints. The standard right now is to replace `{}` in the feature file data with the random number.
