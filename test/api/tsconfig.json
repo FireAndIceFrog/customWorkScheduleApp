@@ -9,6 +9,6 @@
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
   },
-  "include": ["src/**/*", "test/**/*", "features/**/*"],
-  "exclude": ["node_modules", "cucumber.js", "features"]
+  "include": ["src/**/*", "cucumber.js"],
+  "exclude": ["node_modules/**/*"]
 }

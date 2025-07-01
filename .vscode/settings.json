@@ -1,7 +1,7 @@
 {
     "cucumber.glue": [
-        "test/api/**/*.ts",
-        "test/api/steps/*.ts"
+        "test/api/src/**/*.ts",
+        "test/api/src/steps/*.ts"
     ],
     "debug.allowBreakpointsEverywhere": true,
     "cucumberTestRunner.env": {},
