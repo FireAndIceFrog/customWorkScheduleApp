@@ -1,0 +1,10 @@
+{
+    "cucumber.glue": [
+        "test/api/**/*.ts",
+        "test/api/steps/*.ts"
+    ],
+    "debug.allowBreakpointsEverywhere": true,
+    "cucumberTestRunner.env": {},
+    "editor.pasteAs.enabled": false,
+    "editor.pasteAs.showPasteSelector": "never"
+}

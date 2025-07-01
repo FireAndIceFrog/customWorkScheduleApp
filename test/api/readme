@@ -1,0 +1,111 @@
+### What is testing?
+
+- A way to generate trust. Trust between customers and ourselves, and trust between the product and our teams.
+
+## Types of testing?
+
+- Smoke test
+- End to end test
+- API test (integration testing)
+- UI test
+- unit test
+
+## The testing pyramid
+
+```mermaid
+flowchart TD
+    A["E2E Tests (10%)"] --> B
+    B["Integration Tests (20%)"] --> C
+    C["Unit Tests (70%)"]
+    style A fill:#f94,stroke:#333,stroke-width:2px
+    style B fill:#aaf,stroke:#333,stroke-width:2px
+    style C fill:#9f9,stroke:#333,stroke-width:2px
+```
+
+The testing pyramid is a concept that helps us understand the ideal distribution of different types of tests in our test suite:
+
+### Unit Tests (Base Layer)
+- Test individual components or functions in isolation
+- Fast to execute and cheap to maintain
+- Should make up about 70% of your test suite
+- Help developers catch issues early in the development cycle
+
+### Integration Tests (Middle Layer)
+- Test how different parts of the system work together
+- Verify communication between components
+- More complex to set up than unit tests
+- Should make up about 20% of your test suite
+
+### E2E/UI Tests (Top Layer)
+- Test the entire application flow from start to finish
+- Most closely simulate real user behavior
+- Most expensive to maintain and slowest to run
+- Should make up about 10% of your test suite
+- Essential for critical user paths
+
+## Project Setup
+
+This project uses Playwright with Cucumber for end-to-end testing. Here's what's included:
+
+### Key Files
+- `playwright.config.ts`: Playwright configuration including browser settings
+- `cucumber.js`: Cucumber configuration for test execution
+- `tsconfig.json`: TypeScript configuration
+- `tests/cucumber/features/`: Contains feature files written in Gherkin syntax
+- `tests/cucumber/pages/`: Page Object Models
+- `tests/cucumber/steps/`: Step definitions
+
+## Getting Started
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Run all tests:
+```bash
+npm test
+```
+
+3. Generate test report:
+```bash
+npm run report
+```
+
+## Writing Tests
+
+### Feature Files
+Tests are written in Gherkin syntax. Here's an example from our Count feature:
+
+```gherkin
+Feature: Counter
+  Counter should increment and decrement
+
+  Scenario: Counter Increases
+    Given I am on the home page
+    When I click the increment button
+    Then the count should be "1"
+```
+
+### Page Objects
+We use the Page Object Model pattern to encapsulate page interactions. Example:
+
+```typescript
+// demo.page.ts
+export class DemoPage {
+    async clickIncrement() {
+        await this.page.click('[data-testid="increment"]');
+    }
+    
+    async getCount() {
+        return await this.page.textContent('[data-testid="count"]');
+    }
+}
+```
+
+### Best Practices
+1. Use data-testid attributes for element selection
+2. Keep step definitions small and reusable
+3. Use Page Object Model for better maintainability
+4. Write descriptive feature files that serve as documentation
+5. Include only necessary assertions in your tests

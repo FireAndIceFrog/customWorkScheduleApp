@@ -1,7 +1,9 @@
+import { Doctor } from "./Doctor";
+
 export interface DoctorResponse {
   success: boolean;
   message: string;
-  doctor?: any;
-  doctors?: any[];
+  doctor?: Doctor;
+  doctors?: Doctor[];
   errors?: string[];
 }

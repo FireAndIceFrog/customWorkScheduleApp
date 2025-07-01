@@ -1,0 +1,8 @@
+{
+    "name": "automation-test",
+    "workspaces": ["api"],
+    "scripts": {
+        "test": "npm run test --workspaces --if-present",
+        "test:api": "npm run api --workspace api"
+    }
+}
