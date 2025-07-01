@@ -22,17 +22,24 @@ export class DoctorController extends BaseController {
         first_name: string;
         last_name: string;
         email?: string;
-    }): Promise<Doctor> {
+    }): Promise<DoctorResponse> {
         const resp = await this.fetchJson<DoctorResponse>('/doctors', {
             method: 'POST',
             body: JSON.stringify(doctorData),
         });
 
-        if (resp.success){
-            return resp.doctor!;
-        }
+        return resp;
+    }
 
-        throw new Error(resp.message);
+    async attemptCreateDoctor(doctorData: {
+        first_name: string;
+        last_name: string;
+        email?: string;
+    }): Promise<DoctorResponse> {
+        return this.fetchJson<DoctorResponse>('/doctors', {
+            method: 'POST',
+            body: JSON.stringify(doctorData),
+        });
     }
 
     async updateDoctor(doctorId: string, doctorData: {

@@ -29,3 +29,15 @@ Feature: Doctor Feature
         Then the doctor should be successfully deleted
         When I retrieve the list of doctors
         Then I should not see "Jane Smith" in the doctors list
+
+    Scenario: Cannot create doctors with duplicate emails
+        Given I create the following doctors
+        | first_name | last_name | email                    |
+        | First      | Doctor     | duplicate@example.com  |
+        | Second      | Doctor    | duplicate@example.com  |
+        Then the creation should fail with error "Doctor with this email already exists"
+        And the error should contain "Email already exists"
+
+
+        When I delete doctor "First Doctor"
+        Then the doctor should be successfully deleted

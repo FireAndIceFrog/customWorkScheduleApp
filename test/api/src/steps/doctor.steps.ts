@@ -8,6 +8,7 @@ const savedInfo = {
     doctors: [] as Doctor[],
     doctorsList: [] as Doctor[],
     currentDoctor: null as Doctor | null,
+    lastErrorResponse: null as DoctorResponse | null,
 }
 
 Given('I create the following doctors', async function (table: DataTable) {
@@ -15,8 +16,14 @@ Given('I create the following doctors', async function (table: DataTable) {
         .map((row: Doctor) => replaceKeyWithRand<Doctor>(row, 'email'));
 
     for (const doctor of doctors) {
-        const respDoctor = await doctorApi.createDoctor(doctor);
-        savedInfo.doctors.push(respDoctor);
+        const respDoctor = (await doctorApi.createDoctor(doctor));
+
+        if (respDoctor.success === false) {
+            savedInfo.lastErrorResponse = respDoctor;
+            console.error('Error creating doctor:', respDoctor.message);
+            break; // Skip this doctor if creation failed
+        }
+        savedInfo.doctors.push(respDoctor.doctor!);
     }
     console.info('Doctors created:', savedInfo.doctors.map(d => `|${d.first_name} ${d.last_name} (${d.email})| `).join(''));
 });
@@ -100,7 +107,11 @@ Then('the doctor\'s first_name should be {string}', async function (firstName: s
 
 When('I delete doctor {string}', async function (doctorName: string) {
     const [firstName, lastName] = doctorName.split(' ');
-    const doctor = savedInfo.doctors.find(d => d.first_name === firstName && d.last_name === lastName);
+
+    const doctor = (await doctorApi.listDoctors())
+        .doctors!
+        .find(d => d.first_name === firstName && d.last_name === lastName);
+
     expect(doctor).toBeDefined();
     
     await doctorApi.deleteDoctor(doctor!.id);
@@ -119,4 +130,16 @@ Then('the doctor should be successfully deleted', async function () {
 Then('I should not see {string} in the doctors list', async function (doctorName: string) {
     const doctorNames = savedInfo.doctorsList.map(d => `${d.first_name} ${d.last_name}`);
     expect(doctorNames).not.toContain(doctorName);
+});
+
+Then('the creation should fail with error {string}', async function (expectedMessage: string) {
+    expect(savedInfo.lastErrorResponse).toBeDefined();
+    expect(savedInfo.lastErrorResponse!.success).toBe(false);
+    expect(savedInfo.lastErrorResponse!.message).toBe(expectedMessage);
+});
+
+Then('the error should contain {string}', async function (expectedError: string) {
+    expect(savedInfo.lastErrorResponse).toBeDefined();
+    expect(savedInfo.lastErrorResponse!.errors).toBeDefined();
+    expect(savedInfo.lastErrorResponse!.errors).toContain(expectedError);
 });
