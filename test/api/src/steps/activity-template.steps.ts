@@ -1,7 +1,7 @@
 import { Given, When, Then, DataTable } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
-import { ActivityTemplate, TemplateResponse, Doctor, Room } from '@local/server';
-import { activityTemplateApi, doctorApi, roomApi } from './controllerSetups';
+import { ActivityTemplate, TemplateResponse, Doctor, Room, Activity } from '@local/server';
+import { activityApi, activityTemplateApi, doctorApi, roomApi } from './controllerSetups';
 import { sharedState } from './location-room-shared.steps';
 
 const savedInfo = {
@@ -243,5 +243,72 @@ When('I delete all test activity templates', async function () {
         savedInfo.lastErrorResponse = null;
     } catch (error) {
         console.warn('Activity template cleanup error:', error);
+    }
+});
+
+When('I trigger an activity template generation for the month {string}', async function (month: string) {
+    const response = await activityTemplateApi.generateActivities(month);
+    
+    if (response.success) {
+        console.info(`Activities generated for month ${month}:`, response.total_activities_generated);
+    } else {
+        savedInfo.lastErrorResponse = response;
+        console.error('Error generating activities:', response.message);
+    }
+});
+
+Then("I should see the activities for the month {string} matching", async function (month: string, table: DataTable) {
+    const expectedActivities = table.hashes();
+    
+    const doctors = await doctorApi.listDoctors();
+    const expectedEmailSet = new Set(expectedActivities.map(a => a.doctor_email));
+    const expectedDoctors = doctors.doctors!
+        .filter(d => expectedEmailSet.has(d.email!))
+        .map(d => d.id);
+    
+    const activities = await Promise.all(expectedDoctors.map(async (doctor_id) => {
+        const response = await activityApi.getActivities({
+            generation_month: month,
+            doctor_id
+        });
+        return response.activities || [];
+    }));
+
+    for (const expectedActivity of expectedActivities) {
+        const [day,month,year] = expectedActivity.date.split('/').map(Number);
+        const expectedActivityDate = new Date(year, month - 1, day); // JS months are 0-indexed
+        const [startHours, startMinutes] = expectedActivity.start_time.split(':').map(Number);
+        const [endHours, endMinutes] = expectedActivity.end_time.split(':').map(Number);
+
+        const matchingActivity = activities.flat().find((activity) => {
+            // activity.start_time is a unix timestamp, convert it to Date
+            const activityStart = new Date(Number(activity.start_time) * 1000);
+            const activityEnd = new Date(Number(activity.end_time) * 1000);
+
+            const startMinutesAndHoursMatch =   activityStart.getHours() === startHours &&
+                                                activityStart.getMinutes() === startMinutes;
+
+            const endMinutesAndHoursMatch = activityEnd.getHours() === endHours &&
+                                             activityEnd.getMinutes() === endMinutes;
+
+            const dateMatches = expectedActivityDate.getFullYear() === activityStart.getFullYear() &&
+                                expectedActivityDate.getMonth() === activityStart.getMonth();
+
+            const roomMatches = activity.room_name === expectedActivity.room_name;
+            const activityTypeMatches = activity.activity_type === expectedActivity.activity_type;
+
+            //| start_time | end_time | date       | doctor_email                        | room_name     | activity_type |
+            return (
+                startMinutesAndHoursMatch &&
+                endMinutesAndHoursMatch &&
+                dateMatches &&
+                roomMatches &&
+                activityTypeMatches &&
+                expectedDoctors.includes(activity.doctor_id)
+            )
+        });
+        
+        expect(matchingActivity).toBeDefined();
+        console.info(`Found matching activity for ${expectedActivity.date}:`, matchingActivity);
     }
 });

@@ -4,11 +4,13 @@ import { ControllerFunctionAsync } from "../../../utils/ControllerFunction";
 import { createActivity } from "../services/createActivity";
 import { getActivities } from "../services/getActivities";
 import { ActivityFilter } from "../types/ActivityFilter";
+import { deleteActivities } from "../services/deleteActivities";
 
 export class ActivitiesController extends BaseController {
     register() {
         this.app.get("/activities", this.getActivities.bind(this));
         this.app.post("/activities", this.createActivity.bind(this));
+        this.app.delete("/activities", this.deleteActivity.bind(this));
     }
     
     getActivities: ControllerFunctionAsync = async (req, res) => {
@@ -30,6 +32,22 @@ export class ActivitiesController extends BaseController {
     createActivity: ControllerFunctionAsync = async (req, res) => {
         const activityData = req.body;
         const result = await createActivity(activityData);
+        res.json(result);
+    }
+
+    deleteActivity: ControllerFunctionAsync = async (req, res) => {
+        const filter: ActivityFilter = {};
+        
+        if (req.query.id) filter.id = req.query.id as string;
+        if (req.query.doctor_id) filter.doctor_id = req.query.doctor_id as string;
+        if (req.query.room_id) filter.room_id = req.query.room_id as string;
+        if (req.query.start_date) filter.start_date = req.query.start_date as string;
+        if (req.query.end_date) filter.end_date = req.query.end_date as string;
+        if (req.query.activity_type) filter.activity_type = req.query.activity_type as string;
+        if (req.query.is_template_generated) filter.is_template_generated = parseInt(req.query.is_template_generated as string);
+        if (req.query.generation_month) filter.generation_month = req.query.generation_month as string;
+
+        const result = await deleteActivities(filter);
         res.json(result);
     }
 }

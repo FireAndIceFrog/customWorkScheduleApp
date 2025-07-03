@@ -2,6 +2,7 @@ import { uuidv7 } from 'uuidv7';
 import { dbRun, dbGet, dbAll } from '../../../utils/database';
 import { GenerationResult } from '../types/GenerationResult';
 import { ActivityTemplate } from '../types/ActivityTemplate';
+import { createActivity } from '../../activities/services/createActivity';
 
 export const generateActivitiesFromTemplates = async (month: string): Promise<GenerationResult> => {
   const result: GenerationResult = {
@@ -103,31 +104,24 @@ export const generateActivitiesFromTemplates = async (month: string): Promise<Ge
           continue;
         }
 
-        // Generate activity
-        const activityId = uuidv7();
-        const currentTime = Math.floor(Date.now() / 1000);
+        const {activity} = await createActivity({
+          start_time: startTimestamp, // Unix timestamp
+          end_time: endTimestamp, // Unix timestamp
+          doctor_id: template.doctor_id,
+          room_id: template.room_id,
+          activity_type: 'BOOKING', // defaults to 'BOOKING'
+          template_id:template.id,
+          generation_month:month,
+        })
 
-        await dbRun(
-          `INSERT INTO activities (id, start_time, end_time, doctor_id, room_id, activity_type, template_id, generation_month, is_template_generated, created_at, updated_at) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            activityId,
-            startTimestamp,
-            endTimestamp,
-            template.doctor_id,
-            template.room_id,
-            'BOOKING',
-            template.id,
-            month,
-            1,
-            currentTime,
-            currentTime
-          ]
-        );
+        if(!activity) {
+          result.errors?.push(`Failed to create activity for template ${template.id} on ${activityDate.toISOString()}`);
+          continue;
+        }
 
         result.total_activities_generated++;
         result.activities_generated?.push({
-          id: activityId,
+          id: activity.id,
           template_id: template.id,
           doctor_name: (template as any).doctor_name,
           room_name: (template as any).room_name,

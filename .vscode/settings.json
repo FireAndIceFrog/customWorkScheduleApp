@@ -4,7 +4,6 @@
         "test/api/src/steps/*.ts"
     ],
     "debug.allowBreakpointsEverywhere": true,
-    "cucumberTestRunner.env": {},
     "editor.pasteAs.enabled": false,
     "editor.pasteAs.showPasteSelector": "never"
 }

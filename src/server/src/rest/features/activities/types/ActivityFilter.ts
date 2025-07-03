@@ -1,4 +1,5 @@
 export interface ActivityFilter {
+  id?: string;
   doctor_id?: string;
   room_id?: string;
   start_date?: string; // YYYY-MM-DD format

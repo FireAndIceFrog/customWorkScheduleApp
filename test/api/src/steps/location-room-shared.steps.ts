@@ -1,7 +1,7 @@
 import { Given, When, Then, DataTable } from "@cucumber/cucumber";
 import { expect } from '@playwright/test';
 import { Room, RoomResponse, Location, LocationResponse } from '@local/server';
-import { roomApi, locationApi, activityTemplateApi, doctorApi } from './controllerSetups';
+import { roomApi, locationApi, activityTemplateApi, doctorApi, activityApi } from './controllerSetups';
 
 // Shared state for location and room tests
 const sharedState = {
@@ -726,7 +726,9 @@ Then('all integration test data should be cleaned up', async function () {
 
 Given('I clean up all existing test data', async function () {
   try {
-    
+    // Clean all activities first (due to foreign key constraints)
+    await activityApi.cleanupTestActivities();
+
     // Clean all activity templates first (due to foreign key constraints)
     await activityTemplateApi.cleanupTestTemplates();
 

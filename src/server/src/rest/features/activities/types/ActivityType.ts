@@ -1,0 +1,1 @@
+export type ActivityType = 'BOOKING' | 'Leave'

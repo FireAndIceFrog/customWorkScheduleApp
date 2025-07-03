@@ -1,7 +1,9 @@
+import { Activity } from "./Activity";
+
 export interface ActivityResponse {
   success: boolean;
   message: string;
-  activity?: any;
-  activities?: any[];
+  activity?: Activity;
+  activities?: Activity[];
   errors?: string[];
 }

@@ -15,6 +15,11 @@ export const getActivities = async (filters?: ActivityFilter): Promise<ActivityR
     const whereConditions: string[] = [];
     const queryParams: any[] = [];
 
+    if(filters?.id) {
+      whereConditions.push('a.id = ?');
+      queryParams.push(filters.id);
+    }
+
     if (filters?.doctor_id) {
       whereConditions.push('a.doctor_id = ?');
       queryParams.push(filters.doctor_id);
@@ -63,10 +68,20 @@ export const getActivities = async (filters?: ActivityFilter): Promise<ActivityR
       whereClause = 'WHERE ' + whereConditions.join(' AND ');
     }
 
-    // Retrieve activities with related information
     const activities = await dbAll(
       `SELECT 
-        a.*, 
+        a.id,
+        a.start_time,
+        a.end_time,
+        a.doctor_id,
+        a.room_id,
+        a.activity_type,
+        a.notes,
+        a.template_id,
+        a.generation_month,
+        a.is_template_generated,
+        a.created_at,
+        a.updated_at,
         d.first_name || ' ' || d.last_name as doctor_name,
         r.room_name,
         l.location_name,

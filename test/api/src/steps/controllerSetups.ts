@@ -2,6 +2,7 @@ import { DoctorController } from "../controllers/doctor";
 import { LocationController } from "../controllers/location";
 import { RoomController } from "../controllers/room";
 import { ActivityTemplateController } from "../controllers/activity-template";
+import { ActivityController } from "../controllers/activity";
 
 const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
 const apiKey = process.env.API_KEY || 'test-api-key';
@@ -14,3 +15,4 @@ export const doctorApi = new DoctorController(baseUrl, apiKey, headers);
 export const locationApi = new LocationController(baseUrl, apiKey, headers);
 export const roomApi = new RoomController(baseUrl, apiKey, headers);
 export const activityTemplateApi = new ActivityTemplateController(baseUrl, apiKey, headers);
+export const activityApi = new ActivityController(baseUrl, apiKey, headers);

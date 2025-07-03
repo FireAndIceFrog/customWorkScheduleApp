@@ -1,5 +1,5 @@
 import { BaseController } from "./baseController";
-import { ActivityTemplate, TemplateResponse } from "@local/server";
+import { ActivityTemplate, GenerationResult, TemplateResponse } from "@local/server";
 
 export class ActivityTemplateController extends BaseController {
     constructor(
@@ -57,8 +57,8 @@ export class ActivityTemplateController extends BaseController {
         });
     }
 
-    async generateActivities(month: string): Promise<TemplateResponse> {
-        return this.fetchJson<TemplateResponse>(`/activity-templates/generate/${month}`, {
+    async generateActivities(month: string): Promise<GenerationResult> {
+        return this.fetchJson<GenerationResult>(`/activity-templates/generate/${month}`, {
             method: 'POST',
         });
     }
