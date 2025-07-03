@@ -23,3 +23,8 @@ We are using a database that is live. So we wont always have an empty one -all o
 For now all the doctors/activities etc have a random number associated for the unique contraints. The standard right now is to replace `{}` in the feature file data with the random number.
 
 When writing controllers, use the types defined in the @local/server package. It is the exported types from the server itself.
+
+## Test Commands
+The commands you can use are:
+- npm test
+* Do not provide the test name, you need to run the whole test suite

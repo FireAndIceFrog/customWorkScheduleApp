@@ -3,6 +3,9 @@ Feature: Doctor Feature
     As an administrator
     I need to be able to create read update and delete doctors
 
+    Background:
+        Given I clean up all existing test data
+
     Scenario: Complete doctor management lifecycle
         Given I create the following doctors
         | first_name | last_name | email                |

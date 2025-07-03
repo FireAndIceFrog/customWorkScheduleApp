@@ -1,7 +1,7 @@
 import { Given, When, Then, DataTable } from "@cucumber/cucumber";
 import { expect } from '@playwright/test';
 import { Room, RoomResponse, Location, LocationResponse } from '@local/server';
-import { roomApi, locationApi } from './controllerSetups';
+import { roomApi, locationApi, activityTemplateApi, doctorApi } from './controllerSetups';
 
 // Shared state for location and room tests
 const sharedState = {
@@ -11,7 +11,7 @@ const sharedState = {
   locationsList: [] as Location[],
   currentRoom: null as Room | null,
   currentLocation: null as Location | null,
-  lastErrorResponse: null as any,
+  lastErrorResponse: null as LocationResponse | RoomResponse | null,
   testTimestamp: Date.now().toString()
 };
 
@@ -175,10 +175,10 @@ Then('I should see {int} room for that location', async function (expectedCount:
 
 Then('the error should contain {string}', async function (expectedError: string) {
   expect(sharedState.lastErrorResponse).toBeDefined();
-  expect(sharedState.lastErrorResponse.success).toBe(false);
+  expect(sharedState.lastErrorResponse!.success).toBe(false);
   
-  const errorMessage = sharedState.lastErrorResponse.message || '';
-  const errors = sharedState.lastErrorResponse.errors || [];
+  const errorMessage = sharedState.lastErrorResponse!.message || '';
+  const errors = sharedState.lastErrorResponse!.errors || [];
   const allErrors = [errorMessage, ...errors].join(' ').toLowerCase();
   
   expect(allErrors).toContain(expectedError.toLowerCase());
@@ -186,15 +186,15 @@ Then('the error should contain {string}', async function (expectedError: string)
 
 Then('the creation should fail with validation errors', async function () {
   expect(sharedState.lastErrorResponse).toBeDefined();
-  expect(sharedState.lastErrorResponse.success).toBe(false);
+  expect(sharedState.lastErrorResponse!.success).toBe(false);
 });
 
 Then('the error should mention required fields {string} and {string}', async function (field1: string, field2: string) {
   expect(sharedState.lastErrorResponse).toBeDefined();
-  expect(sharedState.lastErrorResponse.success).toBe(false);
+  expect(sharedState.lastErrorResponse!.success).toBe(false);
   
-  const errorMessage = sharedState.lastErrorResponse.message || '';
-  const errors = sharedState.lastErrorResponse.errors || [];
+  const errorMessage = sharedState.lastErrorResponse!.message || '';
+  const errors = sharedState.lastErrorResponse!.errors || [];
   const allErrors = [errorMessage, ...errors].join(' ').toLowerCase();
   
   // Handle both underscore and space variations of field names
@@ -324,7 +324,7 @@ When('I attempt to delete location {string}', async function (locationName: stri
 
 Then('the deletion should fail due to existing rooms', async function () {
   expect(sharedState.lastErrorResponse).toBeDefined();
-  expect(sharedState.lastErrorResponse.success).toBe(false);
+  expect(sharedState.lastErrorResponse!.success).toBe(false);
 });
 
 When('I update location {string} with location_name {string}', async function (locationName: string, newName: string) {
@@ -535,7 +535,7 @@ When('I update room {string} with the following data', async function (roomName:
   const updateData = table.hashes()[0];
   
   if (updateData.capacity) {
-    updateData.capacity = parseInt(updateData.capacity) as any;
+    updateData.capacity = parseInt(updateData.capacity) as unknown as string;
   }
 
   const response = await roomApi.updateRoomPartial(roomName, updateData);
@@ -596,7 +596,7 @@ When('I attempt to create a location without required fields', async function ()
 
 Then('the creation should fail with error about duplicate location_key', async function () {
   expect(sharedState.lastErrorResponse).toBeDefined();
-  expect(sharedState.lastErrorResponse.success).toBe(false);
+  expect(sharedState.lastErrorResponse!.success).toBe(false);
 });
 
 When('I update location {string} with only address {string}', async function (locationName: string, newAddress: string) {
@@ -648,7 +648,7 @@ When('I attempt to create a room with non-existent location', async function () 
 
 Then('the creation should fail with location validation error', async function () {
   expect(sharedState.lastErrorResponse).toBeDefined();
-  expect(sharedState.lastErrorResponse.success).toBe(false);
+  expect(sharedState.lastErrorResponse!.success).toBe(false);
 });
 
 When('I create a room without specifying capacity', async function (table: DataTable) {
@@ -726,11 +726,18 @@ Then('all integration test data should be cleaned up', async function () {
 
 Given('I clean up all existing test data', async function () {
   try {
-    // Clean all test rooms first (due to foreign key constraints)
+    
+    // Clean all activity templates first (due to foreign key constraints)
+    await activityTemplateApi.cleanupTestTemplates();
+
+    // Clean all test rooms (due to foreign key constraints)
     await roomApi.cleanupTestRooms();
     
     // Clean all test locations
     await locationApi.cleanupTestLocations();
+    
+    // Clean all test doctors (cleanup any leftover test doctors)
+    await doctorApi.cleanupTestDoctors();
     
     // Reset shared state
     sharedState.rooms = [];

@@ -68,4 +68,29 @@ export class DoctorController extends BaseController {
             throw new Error(resp.message);
         }
     }
+
+    async cleanupTestDoctors(): Promise<void> {
+        try {
+            const response = await this.listDoctors();
+            if (response.success && response.doctors) {
+                for (const doctor of response.doctors) {
+                    if (doctor.email && 
+                        (doctor.email.includes('test') || 
+                        doctor.email.includes('jane') ||
+                        doctor.email.includes('jonathan') ||
+                        doctor.email.includes('activityTemplateTest') ||
+                        doctor.email.includes('duplicate@example.com'))) {
+                        try {
+                            await this.deleteDoctor(doctor.id);
+                        } catch (error) {
+                            // Ignore errors during cleanup as some doctors might be referenced
+                            console.warn(`Could not delete doctor ${doctor.email}:`, error);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Doctor cleanup error:', error);
+        }
+    }
 }
