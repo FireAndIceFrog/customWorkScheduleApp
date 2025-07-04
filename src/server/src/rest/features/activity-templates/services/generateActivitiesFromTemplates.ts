@@ -31,18 +31,6 @@ export const generateActivitiesFromTemplates = async (month: string): Promise<Ge
     const startDate = new Date(year, monthNum - 1, 1); // First day of month
     const endDate = new Date(year, monthNum, 0); // Last day of month
 
-    // Check if generation already exists for this month
-    const existingGeneration = await dbGet(
-      'SELECT id FROM generation_logs WHERE generation_month = ?',
-      [month]
-    );
-
-    if (existingGeneration) {
-      result.errors?.push('Generation already completed for this month');
-      result.message = 'Activities have already been generated for this month';
-      return result;
-    }
-
     // Get all active templates
     const activeTemplates = await dbAll(
       `SELECT 

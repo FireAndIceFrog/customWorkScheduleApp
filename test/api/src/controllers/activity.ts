@@ -1,6 +1,6 @@
 import { activityTemplateApi } from "../steps/controllerSetups";
 import { BaseController } from "./baseController";
-import { ActivityFilter, ActivityResponse, Activity, TemplateResponse } from "@local/server";
+import { ActivityFilter, ActivityResponse, Activity } from "@local/server";
 
 export class ActivityController extends BaseController {
   constructor(
